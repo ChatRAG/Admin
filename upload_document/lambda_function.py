@@ -4,13 +4,14 @@ from cors import cors
 from botocore.exceptions import ClientError
 
 
+@cors.cors_wrapper
 def handler(event, context):
     body = event.get('body')
     if not body:
-        return cors.with_cors_headers({
+        return {
             'statusCode': 400,
             'body': json.dumps({'error': 'Missing request body'})
-        })
+        }
 
     body = json.loads(body)
     # Get temporary credentials from input
@@ -19,10 +20,10 @@ def handler(event, context):
     aws_session_token = body.get('SessionToken')
 
     if not (aws_access_key_id and aws_secret_access_key and aws_session_token):
-        return cors.with_cors_headers({
+        return {
             'statusCode': 400,
             'body': json.dumps({'error': 'Credentials required'})
-        })
+        }
 
     # Create a Lambda client using temporary credentials
     lambda_client = boto3.client(
@@ -49,24 +50,24 @@ def handler(event, context):
 
         # Read the response
         response_payload = response['Payload'].read().decode('utf-8')
-        return cors.with_cors_headers(json.loads(response_payload))
+        return json.loads(response_payload)
     except ClientError as e:
         # Handle invalid or expired credentials
         error_code = e.response['Error']['Code']
 
         if error_code == 'ExpiredToken':
-            return cors.with_cors_headers({
+            return {
                 'statusCode': 401,
                 'body': json.dumps({'error': 'Credentials have expired'})
-            })
+            }
         elif error_code == 'InvalidClientTokenId':
-            return cors.with_cors_headers({
+            return {
                 'statusCode': 401,
                 'body': json.dumps({'error': 'Invalid credentials'})
-            })
+            }
         else:
             # Handle any other errors
-            return cors.with_cors_headers({
+            return {
                 'statusCode': 500,
                 'body': json.dumps({'error': f"Unexpected error: {e}"})
-            })
+            }

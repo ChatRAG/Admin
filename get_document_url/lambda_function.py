@@ -10,6 +10,8 @@ logger.setLevel(logging.INFO)
 # Initialize the Lambda client
 lambda_client = boto3.client('lambda')
 
+
+@cors.cors_wrapper
 def handler(event, context):
     logger.log(logging.INFO, f"event: {event}, context: {context}")
     # Retrieve query parameters from the event

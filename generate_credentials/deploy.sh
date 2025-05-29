@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set variables
-LAMBDA_FUNCTION_NAME="ChatRAG-ListDocuments"
+LAMBDA_FUNCTION_NAME="ChatRAG-GenerateCredentials"
 ZIP_FILE="lambda-deployment.zip"
 
 # Step 1: Prepare your Python code

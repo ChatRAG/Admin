@@ -1,57 +1,60 @@
 import boto3
-import json
 import logging
 import os
+import json
+from botocore.exceptions import ClientError
 from cors import cors
 
 # Set up logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Initialize the S3 client
-s3 = boto3.client('s3')
+# Initialize Cognito client
+cognito_identity = boto3.client('cognito-identity')
+IDENTITY_POOL_ID = os.environ['IDENTITY_POOL_ID']
+PREDEFINED_PASSWORD = os.environ['PREDEFINED_PASSWORD']
 
 
+@cors.cors_wrapper
 def handler(event, context):
-    # Get the bucket name and file key from the event
-    bucket_name = os.environ['BUCKET_NAME']
+    logger.info(f'Received event: {event}')
+    body = event.get('body')
+    if not body:
+        return {
+            'statusCode': 400,
+            'body': json.dumps({'error': 'Missing request body'})
+        }
 
+    password = json.loads(body).get('password')
+    if password != PREDEFINED_PASSWORD:
+        return {
+            'statusCode': 401,
+            'body': json.dumps({'error': 'Invalid password'})
+        }
+
+    # Generate Identity ID using Cognito
     try:
-        logger.debug(f"Listing documents in S3 bucket: {bucket_name}")
+        response = cognito_identity.get_id(IdentityPoolId=IDENTITY_POOL_ID)
+        identity_id = response['IdentityId']
 
-        prefix = 'uploads/'  # Specify the folder path under which files are stored
-
-        # List objects in the 'uploads/' folder of the S3 bucket
-        response = s3.list_objects_v2(
-            Bucket=bucket_name,
-            Prefix=prefix,
-            Delimiter='/'
+        # Get temporary credentials for the generated identity ID
+        credentials_response = cognito_identity.get_credentials_for_identity(
+            IdentityId=identity_id
         )
 
-        # Extract and log the file names under the uploads/ folder
-        documents = []
-        if 'Contents' in response:
-            for obj in response['Contents']:
-                # Extract the file key (path) and file name
-                file_key = obj['Key']
-                file_name = file_key[len(prefix):]  # Remove the prefix to get the file name
-                documents.append(
-                    {
-                        "key": file_key,
-                        "name": file_name
-                    }
-                )
+        credentials = credentials_response['Credentials']
 
-        # Return the list of document names in the response
-        return cors.with_cors_headers({
+        return {
             'statusCode': 200,
             'body': json.dumps({
-                'documents': documents
+                'AccessKeyId': credentials['AccessKeyId'],
+                'SecretKey': credentials['SecretKey'],
+                'SessionToken': credentials['SessionToken'],
+                'Expiration': credentials['Expiration'].isoformat()
             })
-        })
-    except Exception as e:
-        logger.error(f"Error listing documents in bucket {bucket_name}: {str(e)}")
-        return cors.with_cors_headers({
-            'statusCode': 500,
+        }
+    except ClientError as e:
+        return {
+            'statusCode': 400,
             'body': json.dumps({'error': str(e)})
-        })
+        }
