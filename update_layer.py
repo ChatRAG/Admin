@@ -1,28 +1,42 @@
 import os
 import shutil
 import zipfile
+import subprocess
 import boto3
 from pathlib import Path
 
 LAYER_NAME = "admin"
-SOURCE_LIB_PATHS = [Path("venv/lib"), Path("cors")]
-TEMP_LAYER_DIR = Path("python")
+CUSTOM_LIB_PATHS = [Path("cors")]
+TEMP_LAYER_DIR = Path("./python")
 ZIP_PATH = "layer.zip"
 RUNTIME = ["python3.9"]
 DESCRIPTION = "Auto-updated Lambda Layer"
+REQUIREMENTS_FILE = "requirements.txt"
 
 
-def prepare_layer_directory():
+def install_dependencies():
+    print("[*] Installing dependencies into python...")
     if TEMP_LAYER_DIR.exists():
         shutil.rmtree(TEMP_LAYER_DIR)
     TEMP_LAYER_DIR.mkdir(parents=True)
 
-    for SOURCE_LIB_PATH in SOURCE_LIB_PATHS:
-        if not SOURCE_LIB_PATH.exists():
-            raise FileNotFoundError(f"[!] Source directory '{SOURCE_LIB_PATH}' does not exist.")
+    cmd = [
+        "pip3", "install",
+        "-r", REQUIREMENTS_FILE,
+        "-t", str(TEMP_LAYER_DIR)
+    ]
+
+    subprocess.run(cmd, check=True)
+    print("[✓] Dependencies installed.")
+
+
+def prepare_layer_directory():
+    for custom_lib_path in CUSTOM_LIB_PATHS:
+        if not custom_lib_path.exists():
+            raise FileNotFoundError(f"[!] Source directory '{custom_lib_path}' does not exist.")
 
         print("[*] Copying layer content...")
-        shutil.copytree(SOURCE_LIB_PATH, TEMP_LAYER_DIR / SOURCE_LIB_PATH.name)
+        shutil.copytree(custom_lib_path, TEMP_LAYER_DIR / custom_lib_path.name)
 
 
 def zip_layer():
@@ -64,6 +78,9 @@ def cleanup():
 
 def main():
     try:
+        print("[*] Installing dependencies...")
+        install_dependencies()
+
         print("[*] Preparing layer directory...")
         prepare_layer_directory()
 
