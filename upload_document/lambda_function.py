@@ -3,6 +3,11 @@ import json
 from cors import cors
 from botocore.exceptions import ClientError
 
+# Create an SQS client
+sqs = boto3.client('sqs')
+
+# URL of your SQS queue
+queue_url = 'https://sqs.ap-southeast-2.amazonaws.com/698446905433/chatrag-parse-queue'
 
 @cors.cors_wrapper
 def handler(event, context):
@@ -50,6 +55,19 @@ def handler(event, context):
 
         # Read the response
         response_payload = response['Payload'].read().decode('utf-8')
+
+        # Send a message to MQ
+        response = sqs.send_message(
+            QueueUrl=queue_url,
+            MessageBody=json.dumps({
+                'key': 'value',
+                'other_key': 'other_value'
+            })
+        )
+
+        # Print the response from SQS (including the message ID)
+        print(f"Message sent. response: {response}")
+
         return json.loads(response_payload)
     except ClientError as e:
         # Handle invalid or expired credentials
