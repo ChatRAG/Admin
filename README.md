@@ -1,2 +1,2 @@
 # Admin
-Admin layer, implemented with Python, deployed as AWS Lambda.
+Administrative document manipulation operations and credential distribution.
