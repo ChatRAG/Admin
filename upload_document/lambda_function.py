@@ -55,20 +55,23 @@ def handler(event, context):
 
         # Read the response
         response_payload = response['Payload'].read().decode('utf-8')
+        response = json.loads(response_payload)
 
-        # Send a message to MQ
-        response = sqs.send_message(
-            QueueUrl=queue_url,
-            MessageBody=json.dumps({
-                'key': 'value',
-                'other_key': 'other_value'
-            })
-        )
+        if response['statusCode'] == 200:
+            response_body = json.loads(response['body'])
+            # Send a message to MQ
+            sqs_response = sqs.send_message(
+                QueueUrl=queue_url,
+                MessageBody=json.dumps({
+                    'Event': 'Upload',
+                    'FileKey': response_body['key']
+                })
+            )
 
         # Print the response from SQS (including the message ID)
-        print(f"Message sent. response: {response}")
+        print(f"Message sent. sqs_response: {sqs_response}")
 
-        return json.loads(response_payload)
+        return response
     except ClientError as e:
         # Handle invalid or expired credentials
         error_code = e.response['Error']['Code']
