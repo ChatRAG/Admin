@@ -17,21 +17,21 @@ def handler(event, context):
     # Retrieve query parameters from the event
     queryStringParameters = event.get('queryStringParameters')
     if not queryStringParameters:
-        return cors.with_cors_headers({
+        return {
             'statusCode': 400,
             'body': json.dumps({
                 'error': 'Missing required parameter: FileKey'
             })
-        })
+        }
 
     file_key = queryStringParameters.get('FileKey')
     if not file_key:
-        return cors.with_cors_headers({
+        return {
             'statusCode': 400,
             'body': json.dumps({
                 'error': 'Missing required parameter: FileKey'
             })
-        })
+        }
 
     payload = json.dumps(
         {
@@ -49,13 +49,13 @@ def handler(event, context):
 
         # Read the response
         response_payload = response['Payload'].read().decode('utf-8')
-        return cors.with_cors_headers(json.loads(response_payload))
+        return json.loads(response_payload)
 
     except Exception as e:
         logger.error(f"Error invoking the first Lambda: {str(e)}")
-        return cors.with_cors_headers({
+        return {
             'statusCode': 500,
             'body': json.dumps({
                 'error': str(e)
             })
-        })
+        }
