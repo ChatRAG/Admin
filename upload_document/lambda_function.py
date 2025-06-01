@@ -68,8 +68,8 @@ def handler(event, context):
                 })
             )
 
-        # Print the response from SQS (including the message ID)
-        print(f"Message sent. sqs_response: {sqs_response}")
+            # Print the response from SQS (including the message ID)
+            print(f"Message sent. sqs_response: {sqs_response}")
 
         return response
     except ClientError as e:
