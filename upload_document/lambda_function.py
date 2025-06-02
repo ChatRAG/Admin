@@ -30,6 +30,15 @@ def handler(event, context):
             'body': json.dumps({'error': 'Credentials required'})
         }
 
+    file_name = body.get('FileName')
+    file_data = body.get('FileData')
+
+    if not (file_name and file_data):
+        return {
+            'statusCode': 400,
+            'body': json.dumps({'error': 'file required'})
+        }
+
     # Create a Lambda client using temporary credentials
     lambda_client = boto3.client(
         'lambda',
@@ -40,8 +49,8 @@ def handler(event, context):
 
     payload = json.dumps(
         {
-            'FileName': body.get('FileName'),
-            'FileData': body.get('FileData')
+            'FileName': file_name,
+            'FileData': file_data
         }
     )
 
@@ -64,7 +73,8 @@ def handler(event, context):
                 QueueUrl=queue_url,
                 MessageBody=json.dumps({
                     'Event': 'Upload',
-                    'FileKey': response_body['key']
+                    'FileKey': response_body['key'],
+                    'FileName': file_name,
                 })
             )
 
