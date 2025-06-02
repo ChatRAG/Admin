@@ -25,6 +25,40 @@ def handler(event, context):
             'body': json.dumps({'error': 'Credentials required'})
         }
 
+    lambda_client = boto3.client('lambda')
+
+    file_key = body.get('FileKey')
+    if not file_key:
+        return {
+            'statusCode': 400,
+            'body': json.dumps({'error': 'File key required'})
+        }
+
+    payload = json.dumps(
+        {
+            'file_key': file_key
+        }
+    )
+
+    try:
+        # Invoke the Lambda function
+        response = lambda_client.invoke(
+            FunctionName="ChatRAG-Search-DeleteChunk",
+            InvocationType='RequestResponse',  # Use 'Event' for async invocation
+            Payload=payload
+        )
+
+        # Read the response
+        response_payload = response['Payload'].read().decode('utf-8')
+        response = json.loads(response_payload)
+        if response['statusCode'] != 200:
+            return response
+    except ClientError as e:
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'error': f"Unexpected error: {e}"})
+        }
+
     # Create a Lambda client using temporary credentials
     lambda_client = boto3.client(
         'lambda',
@@ -35,7 +69,7 @@ def handler(event, context):
 
     payload = json.dumps(
         {
-            'FileKey': body.get('FileKey')
+            'FileKey': file_key
         }
     )
 
